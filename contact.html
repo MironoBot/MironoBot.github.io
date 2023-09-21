@@ -56,14 +56,35 @@
         document.documentElement.scrollTop = 0;
       }
     </script>
+<h1>Contactează-ne</h1>
+<h3>Ne găsești pe Facebook, Instagram sau Email prin completarea formularului de mai jos.</h3>
+<table class="center">
+    <tr>
+        <th>
+            <a href="https://www.facebook.com/MironoBot"><img src="fb.png" alt="facebook" style="width:42px;height:42px;"></a>
+        </th>
+        <th>
+            <a href="https://www.instagram.com/mironobot_ro154/"><img src="i.png" alt="instagram" style="width:42px;height:42px;"></a>
+        </th>
+    </tr>
+</table>
+<br>
+<br>
+<link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css">
+   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+   <!-- Style The Contact Form How Ever You Prefer -->
+   <link rel="stylesheet" href="style.css">
 
-
+  
+    <!-- change the form action to your script url -->
 <div class="fcf-body">
 
 <div id="fcf-form">
 <h2 class="fcf-h3">Contact us</h2>
 
-<form class="fcf-form-class" method="POST" id="contact-form">
+<form class="fcf-form-class" method="POST" data-email="mironobot@gmail.com"
+  action="https://script.google.com/macros/s/AKfycbxFaWSS6IpCt0r8uItiouFZJmvbdafl7DN9ZZwXlQlpuJhoiSb5Z6pYGUR-ZbOz1Rav/exec">
+    
     <div class="fcf-form-group">
         <label for="Name" class="fcf-label">Your name</label>
         <div class="fcf-input-group">
@@ -88,44 +109,126 @@
     <div class="fcf-form-group">
         <button type="submit" id="fcf-button" class="fcf-btn fcf-btn-primary fcf-btn-lg fcf-btn-block">Send Message</button>
     </div>
-    <div id="form-status"></div>
-
+    <div class="thankyou_message" style="display:none;">
+      <h4><em>Thanks</em> for contacting us!
+        We will get back to you soon!</h4>
 </div>
 </form>
 </div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> <!-- Add jQuery library -->
 
-<script>
-$(document).ready(function() {
-    $("#contact-form").submit(function(e) {
-        e.preventDefault(); // Prevent the default form submission
-        
-        // Serialize the form data
-        var formData = $(this).serialize();
-        
-        // Send the form data to the PHP script using AJAX
-        $.ajax({
-            type: "POST",
-            url: "sendmail.php", // Specify the PHP script URL
-            data: formData,
-            success: function(response) {
-                if (response.trim() === 'success') {
-                    // Show a success message
-                    $("#form-status").html('<div class="thankyou_message"><h4><em>Thanks</em> for contacting us! We will get back to you soon!</h4></div>');
-                } else {
-                    // Show an error message
-                    $("#form-status").html('<div class="error_message"><h4>Sorry, there was an error sending your message. Please try again later.</h4></div>');
-                }
-            }
-        });
-    });
-});
-</script>
 </div>
     <iframe class="map-responsive" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1074.6660879247534!2d26.722295699984087!3d47.25592311005347!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473533a6d6d8881d%3A0xc650e8da4849bad1!2sLiceul%20Teoretic%20%22MIRON%20COSTIN%22%20Pa%C8%99cani!5e0!3m2!1sro!2sro!4v1655331201081!5m2!1sro!2sro"
         width="1000" height="600" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
         <br>
         <br>
+ 
+<script data-cfasync="false">
+    (function() {
+    // get all data in form and return object
+    function getFormData(form) {
+      var elements = form.elements;
+      var honeypot;
+  
+      var fields = Object.keys(elements).filter(function(k) {
+        if (elements[k].name === "honeypot") {
+          honeypot = elements[k].value;
+          return false;
+        }
+        return true;
+      }).map(function(k) {
+        if(elements[k].name !== undefined) {
+          return elements[k].name;
+        // special case for Edge's html collection
+        }else if(elements[k].length > 0){
+          return elements[k].item(0).name;
+        }
+      }).filter(function(item, pos, self) {
+        return self.indexOf(item) == pos && item;
+      });
+  
+      var formData = {};
+      fields.forEach(function(name){
+        var element = elements[name];
+        
+        // singular form elements just have one value
+        formData[name] = element.value;
+  
+        // when our element has multiple items, get their values
+        if (element.length) {
+          var data = [];
+          for (var i = 0; i < element.length; i++) {
+            var item = element.item(i);
+            if (item.checked || item.selected) {
+              data.push(item.value);
+            }
+          }
+          formData[name] = data.join(', ');
+        }
+      });
+  
+      // add form-specific values into the data
+      formData.formDataNameOrder = JSON.stringify(fields);
+      formData.formGoogleSheetName = form.dataset.sheet || "responses"; // default sheet name
+      formData.formGoogleSendEmail
+        = form.dataset.email || ""; // no email by default
+  
+      return {data: formData, honeypot: honeypot};
+    }
+  
+    function handleFormSubmit(event) {  // handles form submit without any jquery
+      event.preventDefault();           // we are submitting via xhr below
+      var form = event.target;
+      var formData = getFormData(form);
+      var data = formData.data;
+  
+      // If a honeypot field is filled, assume it was done so by a spam bot.
+      if (formData.honeypot) {
+        return false;
+      }
+  
+      disableAllButtons(form);
+      var url = form.action;
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      // xhr.withCredentials = true;
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhr.onreadystatechange = function() {
+          if (xhr.readyState === 4 && xhr.status === 200) {
+            form.reset();
+            var formElements = form.querySelector(".form-elements")
+            if (formElements) {
+              formElements.style.display = "none"; // hide form
+            }
+            var thankYouMessage = form.querySelector(".thankyou_message");
+            if (thankYouMessage) {
+              thankYouMessage.style.display = "block";
+            }
+          }
+      };
+      // url encode form data for sending as post data
+      var encoded = Object.keys(data).map(function(k) {
+          return encodeURIComponent(k) + "=" + encodeURIComponent(data[k]);
+      }).join('&');
+      xhr.send(encoded);
+    }
+    
+    function loaded() {
+      // bind to the submit event of our form
+      var forms = document.querySelectorAll("form.fcf-form-class");
+      for (var i = 0; i < forms.length; i++) {
+        forms[i].addEventListener("submit", handleFormSubmit, false);
+      }
+    };
+    document.addEventListener("DOMContentLoaded", loaded, false);
+  
+    function disableAllButtons(form) {
+      var buttons = form.querySelectorAll("button");
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].disabled = true;
+      }
+    }
+  })();
+</script>
 
 </body>
 <footer class="footer-distributed">
